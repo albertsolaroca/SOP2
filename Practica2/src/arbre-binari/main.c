@@ -70,7 +70,6 @@ void process_line(char *line, rb_tree* tree)
     int i, j, is_word, len_line;
     char paraula[MAXCHAR];
     node_data *n_data;
-    //char* tilde = "'";
     i = 0;
 
     len_line = strlen(line);
@@ -124,15 +123,12 @@ void process_line(char *line, rb_tree* tree)
     } /* while (i < len_line) */
 }
 
-void process_file(rb_tree* tree){
+void process_file(char* filename, rb_tree* tree){
     FILE *fp;
-    char* filename;
     char line[MAXCHAR];
     char* linia;
     int i;
-    
-    filename = "../base_dades/etext00/00ws110.txt";
-    
+
     fp = fopen(filename, "r");
     if (!fp) {
         printf("Could not open file\n");
@@ -146,6 +142,28 @@ void process_file(rb_tree* tree){
         process_line(linia,tree);
     }
     
+}
+
+void process_data_base(char* database_name, rb* tree){
+    FILE *fp;
+    char line[MAXCHAR];
+    char file[MAXCHAR];
+
+    fp = fopen(filename, "r");
+    if (!fp) {
+        printf("Could not open file\n");
+        exit(1);
+    }
+
+    //Number of files to read
+    num_files = int(fgets(line, MAXCHAR,fp));
+    while(fgets(line,MAXCHAR,fp) && i < num_files){
+        file = malloc((strlen(line)+1)*sizeof(char));
+        for(i=0;i<strlen(line);i++)
+            file[i] = line[i];
+        file[strlen(line)-1] = 0;
+        process_file(file,tree)
+    }
 }
 
 void extract_words(rb_tree* tree){
@@ -174,18 +192,23 @@ int main(int argc, char **argv)
 {
   rb_tree *tree;
 
+  if(argc != 1){
+      printf("%s <data_base_name>\n", argv[0]);
+      exit(1);
+  }
+
   printf("Test with red-black-tree\n");
 
   /* Allocate memory for tree */
   tree = (rb_tree *) malloc(sizeof(rb_tree));
+  data_base_name = atoi(argv[1]);
 
   /* Initialize the tree */
   init_tree(tree);
 
   extract_words(tree);
-  
-  
-  process_file(tree);
+
+  process_data_base(data_base_name,tree);
   
     
   /*char* a = "maraca";
