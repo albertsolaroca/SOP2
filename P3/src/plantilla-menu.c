@@ -310,8 +310,8 @@ int main(int argc, char **argv)
                 str1[strlen(str1)-1]=0;
 
                 if(str1[0] == '\n'){
-                    node_data* max = max(tree);
-                    printf ("The word with most appearances is %d with %s appearances.",  ); 
+                    node* max = find_most_occurrences(tree);
+                    printf ("The word with most appearances is %s with %d appearances.", max->data->key, max->data->num_times ); 
                 } else{
                     node_data * word_info = find_node(tree,str1);
                     printf("The word %s appears %d times.", word_info->key,word_info->num_times);

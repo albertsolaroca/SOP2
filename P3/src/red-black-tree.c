@@ -121,19 +121,21 @@ node_data *find_node(rb_tree *tree, char* key) {
     return NULL;
 }
 
-node_data* find_most_occurrences_recursive(node* x){
-    if(x->right != NIL){
+node* find_most_occurrences_recursive(node* x){
+    if(x->right == NIL){
         return x->left;
     }
-    if(x->left != NIL){
+    if(x->left == NIL){
         return x->right;
     }
-    node_data* max_right = find_most_occurrences_recursive(x->right);
-    node_data* max_left = find_most_occurrences_recursive(x->left);
-    max_right->num_times > max_left->num_times ? return max_right : return max_left;
+    node* max_right = find_most_occurrences_recursive(x->right);
+    node* max_left = find_most_occurrences_recursive(x->left);
+    if(max_right->data->num_times > max_left->data->num_times) 
+        return max_right;
+    return max_left;
 }
 
-node_data* find_most_occurrences(rb_tree* tree){
+node* find_most_occurrences(rb_tree* tree){
     if(tree->root != NIL){
         return find_most_occurrences_recursive(tree->root);
     } else{
