@@ -121,18 +121,20 @@ node_data *find_node(rb_tree *tree, char* key) {
     return NULL;
 }
 
+//TODO CHANGE CURRENT TO x
 node* find_most_occurrences_recursive(node* x){
-    if(x->right == NIL){
-        return x->left;
-    }
-    if(x->left == NIL){
-        return x->right;
-    }
-    node* max_right = find_most_occurrences_recursive(x->right);
-    node* max_left = find_most_occurrences_recursive(x->left);
-    if(max_right->data->num_times > max_left->data->num_times) 
-        return max_right;
-    return max_left;
+    node* current = x;
+    node* max_right = NIL;
+    node* max_left = NIL;
+    if(current->right != NIL)
+        max_right = find_most_occurrences_recursive(x->right);
+    if(current->left != NIL)
+        max_left = find_most_occurrences_recursive(x->left);
+    if(max_right != NIL && max_right->data->num_times > current->data->num_times) 
+        current = max_right;
+    if(max_left != NIL && max_left->data->num_times > current->data->num_times)
+        current = max_left;
+    return current;
 }
 
 node* find_most_occurrences(rb_tree* tree){
@@ -140,6 +142,63 @@ node* find_most_occurrences(rb_tree* tree){
         return find_most_occurrences_recursive(tree->root);
     } else{
         return NIL;
+    }
+}
+
+void save_tree_recursive(node* node, FILE* fp){
+    int len, num_times;
+    if(node->right != NIL){
+        len = strlen(node->right->data->key);
+        num_times = node->right->data->num_times;
+        fwrite(&len, 1, sizeof(int), fp);
+        fwrite(node->right->data->key,1,sizeof(node->right->data->key),fp);
+        fwrite(&num_times,1,sizeof(int),fp);
+        save_tree_recursive(node->right,fp);
+    }if(node->left != NIL){
+        len = strlen(node->left->data->key);
+        num_times = node->left->data->num_times;
+        fwrite(&len, 1, sizeof(int), fp);
+        fwrite(node->left->data->key,1,sizeof(node->left->data->key),fp);
+        fwrite(&num_times,1,sizeof(int),fp);
+        save_tree_recursive(node->left,fp);
+    }
+}
+
+void save_tree(rb_tree* tree, FILE* fp){
+    char* magicNumber = "0x01234567";
+    int nodeNumber = tree->num_nodes;
+    fwrite(magicNumber,1,sizeof(magicNumber), fp); 
+    fwrite(&nodeNumber,1,sizeof(int), fp);
+    if(tree->root != NIL){
+        save_tree_recursive(tree->root,fp);
+    }
+}
+
+void load_tree(rb_tree* tree, FILE* fp){
+    char* magicNumber = "";
+    int nodeNumber = tree->num_nodes;
+    int i;
+    int len, num_times;
+    char* word;
+    fread(magicNumber,1,sizeof(magicNumber), fp); 
+    if(magicNumber == "0x01234567"){
+        fread(&nodeNumber,1,sizeof(int), fp);
+        for(i=0; i < nodeNumber; i++){
+            fread(&len, 1, sizeof(int), fp);
+            fread(word,1,len,fp);
+            fread(&num_times,1,sizeof(int),fp);
+            n_data = malloc(sizeof(node_data));
+        
+            /* This is the key by which the node is indexed in the tree */
+            n_data->key = word;
+            
+            /* This is additional information that is stored in the tree */
+            n_data->num_times = num_times;
+
+            /* We insert the node in the tree */
+            insert_node(tree, n_data);
+            tree->num_nodes++;
+        }
     }
 }
 

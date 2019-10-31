@@ -285,13 +285,8 @@ int main(int argc, char **argv)
                     printf("No existeix cap arbre");
                 } else{
                     fp = fopen(str1, "w");
-                    int magicNumber = 01234567;
-                    int nodeNumber = //Whatever we need to get the number of nodes
-                    putw(magicNumber, fp); //This should print the number on the file.
-                    putw(nodeNumber, fp);
-                    for(int i = 0; i  < nodeNumber; i++){
-                        //Recorrem l'arbre
-                    }
+                    save_tree(tree,fp);
+                    fclose(fp);
                 }
                 break;
 
@@ -300,21 +295,35 @@ int main(int argc, char **argv)
                 fgets(str1, MAXCHAR, stdin);
                 str1[strlen(str1)-1]=0;
 
-                /* Falta codi */
+                /* FALTA IF OBRIR FITXER */
+                if (tree->root != NIL){
+                    delete_tree(tree);
+                    free(tree);
+                    tree = (rb_tree *) malloc(sizeof(rb_tree));    
+                    init_tree(tree);
+                }
                 
+                
+                fp = fopen(str1, "r");
+                load_tree(tree,fp);
+                fclose(fp);
                 break;
 
-            case 4://Falta posar la paraula i aparicions. A part d'això, DONE.
+            case 4://DONE.
                 printf("Paraula a buscar o prem enter per saber la paraula que apareix mes vegades: ");
                 fgets(str1, MAXCHAR, stdin);
                 str1[strlen(str1)-1]=0;
-
-                if(str1[0] == '\n'){
-                    node* max = find_most_occurrences(tree);
-                    printf ("The word with most appearances is %s with %d appearances.", max->data->key, max->data->num_times ); 
+                if(tree->root != NIL){
+                    if(str1[0] == 0){
+                        node* max = find_most_occurrences(tree);
+                        
+                        printf ("The word with most appearances is %s with %d appearances.", max->data->key, max->data->num_times ); 
+                    } else{
+                        node_data * word_info = find_node(tree,str1);
+                        printf("The word %s appears %d times.", word_info->key,word_info->num_times);
+                    }
                 } else{
-                    node_data * word_info = find_node(tree,str1);
-                    printf("The word %s appears %d times.", word_info->key,word_info->num_times);
+                    printf("S'ha de crear un arbre abans de fer comprovacions");
                 }
                 
                 break;

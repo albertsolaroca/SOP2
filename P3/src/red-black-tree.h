@@ -80,5 +80,7 @@ void init_tree(rb_tree *tree);
 void insert_node(rb_tree *tree, node_data *d);
 node_data *find_node(rb_tree *tree, char* key); 
 node* find_most_occurrences(rb_tree* tree);
+void save_tree(rb_tree* tree, FILE* fp);
+void load_tree(rb_tree* tree, FILE* fp);
 void delete_tree(rb_tree *tree);
 
