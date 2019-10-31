@@ -285,8 +285,13 @@ int main(int argc, char **argv)
                     printf("No existeix cap arbre");
                 } else{
                     fp = fopen(str1, "w");
-                    int i = 01234567;
-                    fprintf(fp, "%d\n", i);
+                    int magicNumber = 01234567;
+                    int nodeNumber = //Whatever we need to get the number of nodes
+                    putw(magicNumber, fp); //This should print the number on the file.
+                    putw(nodeNumber, fp);
+                    for(int i = 0; i  < nodeNumber; i++){
+                        //Recorrem l'arbre
+                    }
                 }
                 break;
 
