@@ -291,21 +291,22 @@ int main(int argc, char **argv)
                 break;
 
             case 3:
-                printf("Nom del fitxer que conte l'arbre: ");
+                printf("Nom del fitxer que conté l'arbre: ");
                 fgets(str1, MAXCHAR, stdin);
                 str1[strlen(str1)-1]=0;
 
                 /* Falta codi */
-
+                
                 break;
 
-            case 4:
-                printf("Paraula a buscar o polsa enter per saber la paraula que apareix mes vegades: ");
+            case 4://Falta posar la paraula i aparicions. A part d'això, DONE.
+                printf("Paraula a buscar o prem enter per saber la paraula que apareix mes vegades: ");
                 fgets(str1, MAXCHAR, stdin);
                 str1[strlen(str1)-1]=0;
 
                 if(str1[0] == '\n'){
                     int max = max(tree);
+                    printf ("The word with most appearances is %d with %s appearances.", ); 
                 } else{
                     node_data * word_info = find_node(tree,str1);
                     printf("The word %s appears %d times.", word_info->key,word_info->num_times);
