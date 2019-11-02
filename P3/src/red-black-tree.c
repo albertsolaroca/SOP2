@@ -1,7 +1,7 @@
 /**
  *
- * Red-black tree implementation. 
- * 
+ * Red-black tree implementation.
+ *
  * Binary search trees work best when they are balanced or the path length from
  * root to any leaf is within some bounds. The red-black tree algorithm is a
  * method for balancing trees. The name derives from the fact that each node is
@@ -31,7 +31,7 @@
  * Free data element. The user should adapt this function to their needs.  This
  * function is called internally by deletenode and is used to free the dynamic
  * memory that is stored inside node_data. The memory is allocated by the user
- * code, just before the node is inserted in the tree. 
+ * code, just before the node is inserted in the tree.
  *
  */
 
@@ -79,7 +79,7 @@ int compare_key1_equal_to_key2(char* key1, char* key2)
 }
 
 /**
- * 
+ *
  * The red-black tree uses the sentilnel code as a leave node.
  *
  */
@@ -89,7 +89,7 @@ node sentinel = { NULL, NULL, NULL, NULL, BLACK};
 /**
  *
  * Initialize the tree.
- * 
+ *
  */
 
 void init_tree(rb_tree *tree)
@@ -130,7 +130,7 @@ node* find_most_occurrences_recursive(node* x){
         max_right = find_most_occurrences_recursive(x->right);
     if(current->left != NIL)
         max_left = find_most_occurrences_recursive(x->left);
-    if(max_right != NIL && max_right->data->num_times > current->data->num_times) 
+    if(max_right != NIL && max_right->data->num_times > current->data->num_times)
         current = max_right;
     if(max_left != NIL && max_left->data->num_times > current->data->num_times)
         current = max_left;
@@ -167,8 +167,8 @@ void save_tree_recursive(node* node, FILE* fp){
 void save_tree(rb_tree* tree, FILE* fp){
     char* magicNumber = "0x01234567";
     int nodeNumber = tree->num_nodes;
-    fwrite(magicNumber,1,sizeof(magicNumber), fp); 
-    fwrite(&nodeNumber,1,sizeof(int), fp);
+    fwrite(magicNumber,4,sizeof(magicNumber), fp);
+    fwrite(&nodeNumber,4,sizeof(int), fp);
     if(tree->root != NIL){
         save_tree_recursive(tree->root,fp);
     }
@@ -176,22 +176,22 @@ void save_tree(rb_tree* tree, FILE* fp){
 
 void load_tree(rb_tree* tree, FILE* fp){
     char* magicNumber = "";
-    int nodeNumber = tree->num_nodes;
+    int nodeNumber = 0;
     int i;
     int len, num_times;
     char* word;
-    fread(magicNumber,1,sizeof(magicNumber), fp); 
+    fread(magicNumber,4,sizeof(magicNumber), fp);
     if(magicNumber == "0x01234567"){
-        fread(&nodeNumber,1,sizeof(int), fp);
+        fread(&nodeNumber,4,sizeof(int), fp);
         for(i=0; i < nodeNumber; i++){
             fread(&len, 1, sizeof(int), fp);
             fread(word,1,len,fp);
             fread(&num_times,1,sizeof(int),fp);
             n_data = malloc(sizeof(node_data));
-        
+
             /* This is the key by which the node is indexed in the tree */
             n_data->key = word;
-            
+
             /* This is additional information that is stored in the tree */
             n_data->num_times = num_times;
 
@@ -202,7 +202,7 @@ void load_tree(rb_tree* tree, FILE* fp){
     }
 }
 
-/** 
+/**
  *
  * NO FA FALTA MODIFICAR EL CODI QUE HI HA SOTA PER FER LES PRACTIQUES.
  *
@@ -210,7 +210,7 @@ void load_tree(rb_tree* tree, FILE* fp){
 
 /**
  *
- *  Function used to delete a tree. Do not call directly. 
+ *  Function used to delete a tree. Do not call directly.
  *
  */
 
@@ -231,7 +231,7 @@ void delete_tree_recursive(node *x)
 /**
  *
  *  Delete a tree. All the nodes and all the data pointed to by
- *  the tree is deleted. 
+ *  the tree is deleted.
  *
  */
 
@@ -273,7 +273,7 @@ void rotate_left(rb_tree *tree, node *x) {
 }
 
 /**
- *  
+ *
  *  Rotate node x to right. Should not be called directly by the user. This
  *  function is used internally by other functions.
  *
@@ -302,7 +302,7 @@ void rotate_right(rb_tree *tree, node *x) {
     if (x != NIL) x->parent = y;
 }
 
-/** 
+/**
  *
  * Maintain Red-Black tree balance  after inserting node x. Should not be
  * called directly by the user. This function is used internally by other
@@ -365,7 +365,7 @@ void insert_fixup(rb_tree *tree, node *x) {
 }
 
 /**
- *  
+ *
  * Allocate node for data and insert in tree. This function does not perform a
  * copy of data when inserting it in the tree, it rather creates a node and
  * makes this node point to the data. Thus, the contents of data should not be
@@ -396,7 +396,7 @@ void insert_node(rb_tree *tree, node_data *data) {
     }
 
     /* Note that the data is not copied. Just the pointer
-       is assigned. This means that the pointer to the 
+       is assigned. This means that the pointer to the
        data should not be overwritten after calling this
        function. */
 
@@ -420,5 +420,3 @@ void insert_node(rb_tree *tree, node_data *data) {
 
     insert_fixup(tree, x);
 }
-
-
