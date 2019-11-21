@@ -148,45 +148,49 @@ node* find_most_occurrences(rb_tree* tree){
 void save_tree_recursive(node* node, FILE* fp){
     int len, num_times;
     if(node->right != NIL){
-        len = strlen(node->right->data->key);
+        len = strlen(node->right->data->key)+1;
         num_times = node->right->data->num_times;
-        fwrite(&len, 1, sizeof(int), fp);
-        fwrite(node->right->data->key,1,sizeof(node->right->data->key),fp);
-        fwrite(&num_times,1,sizeof(int),fp);
+        fwrite(&len, 4, 1, fp);
+        fwrite(node->right->data->key,sizeof(char),len,fp);
+        fwrite(&num_times,4,1,fp);
         save_tree_recursive(node->right,fp);
     }if(node->left != NIL){
-        len = strlen(node->left->data->key);
+        len = strlen(node->left->data->key)+1;
         num_times = node->left->data->num_times;
-        fwrite(&len, 1, sizeof(int), fp);
-        fwrite(node->left->data->key,1,sizeof(node->left->data->key),fp);
-        fwrite(&num_times,1,sizeof(int),fp);
+        fwrite(&len, 4, 1, fp);
+        fwrite(node->left->data->key,sizeof(char),len,fp);
+        fwrite(&num_times,4,1,fp);
         save_tree_recursive(node->left,fp);
     }
 }
 
 void save_tree(rb_tree* tree, FILE* fp){
-    char* magicNumber = "0x01234567";
+    int magicNumber = 0x01234567;
     int nodeNumber = tree->num_nodes;
-    fwrite(magicNumber,4,sizeof(magicNumber), fp);
-    fwrite(&nodeNumber,4,sizeof(int), fp);
+    fwrite(&magicNumber,4,1, fp);
+    fwrite(&nodeNumber,4,1, fp);
     if(tree->root != NIL){
         save_tree_recursive(tree->root,fp);
     }
 }
 
 void load_tree(rb_tree* tree, FILE* fp){
-    char* magicNumber = "";
+    int magicNumber;
     int nodeNumber = 0;
     int i;
     int len, num_times;
-    char* word;
-    fread(magicNumber,4,sizeof(magicNumber), fp);
-    if(magicNumber == "0x01234567"){
-        fread(&nodeNumber,4,sizeof(int), fp);
+    char* word = "";
+    node_data *n_data;
+    fread(&magicNumber, 4, 1, fp);
+    if(magicNumber == 0x01234567){
+        fread(&nodeNumber,4,1, fp);
         for(i=0; i < nodeNumber; i++){
-            fread(&len, 1, sizeof(int), fp);
-            fread(word,1,len,fp);
-            fread(&num_times,1,sizeof(int),fp);
+            fread(&len, 4,1, fp);
+            printf("Longitud:%d\n", len);
+            //fread(word, sizeof(char),len,fp);
+            //printf("%s", word);
+            fread(&num_times,4,1,fp);
+            printf("%d \n", num_times);
             n_data = malloc(sizeof(node_data));
 
             /* This is the key by which the node is indexed in the tree */

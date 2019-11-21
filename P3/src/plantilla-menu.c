@@ -45,7 +45,7 @@ void add_word_to_tree(char* paraula, rb_tree* tree){
         n_data->key = paraula;
         
         /* This is additional information that is stored in the tree */
-        n_data->num_times = 1;
+        n_data->num_times = 0;
 
         /* We insert the node in the tree */
         insert_node(tree, n_data);
@@ -278,7 +278,6 @@ int main(int argc, char **argv)
             case 2:
                 printf("Nom de fitxer en que es desara l'arbre: ");
                 fgets(str1, MAXCHAR, stdin);
-                str1[strlen(str1)-1]=0;
 
                 /* Falta codi */
                 if (tree->root == NIL){
@@ -293,20 +292,20 @@ int main(int argc, char **argv)
             case 3:
                 printf("Nom del fitxer que conté l'arbre: ");
                 fgets(str1, MAXCHAR, stdin);
-                str1[strlen(str1)-1]=0;
-
-                /* FALTA IF OBRIR FITXER */
                 if (tree->root != NIL){
                     delete_tree(tree);
                     free(tree);
                     tree = (rb_tree *) malloc(sizeof(rb_tree));    
                     init_tree(tree);
                 }
-                
-                
                 fp = fopen(str1, "r");
-                load_tree(tree,fp);
-                fclose(fp);
+                if (!fp) {
+                    printf("Could not open file\n");
+                }else{
+                    load_tree(tree,fp);
+                    fclose(fp);
+                }
+                
                 break;
 
             case 4://DONE.
