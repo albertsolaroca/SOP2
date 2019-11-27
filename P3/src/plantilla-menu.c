@@ -99,7 +99,7 @@ void process_line(char *line, rb_tree* tree)
         if (is_word) {
 
             /* Put a '\0' (end-of-word) at the end of the string*/
-            //paraula[j] = 0;
+            paraula[j] = 0;
 
             n_data = find_node(tree, paraula);
 
@@ -184,10 +184,10 @@ void process_dictionary(rb_tree* tree, char* dictionary){
     
     while (fgets(line, MAXCHAR, fp)){
 
-        palabra = malloc((strlen(line))*sizeof(char));
+        palabra = malloc((strlen(line)+1)*sizeof(char));
         for(i=0;i<strlen(line);i++)
             palabra[i] = line[i];
-        //palabra[strlen(line)] = 0;
+        palabra[strlen(line)] = '\0';
         add_word_to_tree(palabra,tree);
     }
     fclose(fp);

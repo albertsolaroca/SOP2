@@ -190,7 +190,7 @@ void load_tree(rb_tree* tree, FILE* fp){
     comodin = fread(&magicNumber, sizeof(int), 1, fp);
     if(magicNumber == MAGIC_NUMBER){
         comodin = fread(&nodeNumber,sizeof(int),1, fp);
-        for(i=0; i < nodeNumber; i++){
+        for(i=0; i < nodeNumber - 1; i++){
             comodin = fread(&len, sizeof(int),1, fp);
             if (comodin != 0){
                 printf("Longitud:%d\n", len);
@@ -218,7 +218,6 @@ void load_tree(rb_tree* tree, FILE* fp){
             /* We insert the node in the tree */
             insert_node(tree, n_data);
             tree->num_nodes++; 
-            free(paraula);
             //free(n_data);
         }
     }
@@ -400,7 +399,6 @@ void insert_node(rb_tree *tree, node_data *data) {
 
     /* Find where node belongs */
     current = tree->root;
-    printf("KEY: %s\n", data->key);
     parent = 0;
     while (current != NIL) {
         if (compare_key1_equal_to_key2(data->key, current->data->key)) {
