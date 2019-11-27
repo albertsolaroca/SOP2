@@ -25,6 +25,9 @@
 #include <stdarg.h>
 
 #include "red-black-tree.h"
+#define MAXCHAR      100
+#define MAGIC_NUMBER 0x01234567
+
 
 /**
  *
@@ -151,14 +154,14 @@ void save_tree_recursive(node* node, FILE* fp){
         len = strlen(node->right->data->key)+1;
         num_times = node->right->data->num_times;
         fwrite(&len, 4, 1, fp);
-        fwrite(node->right->data->key,sizeof(char),len,fp);
+        fwrite(node->right->data->key, sizeof(char),len,fp);
         fwrite(&num_times,4,1,fp);
         save_tree_recursive(node->right,fp);
     }if(node->left != NIL){
         len = strlen(node->left->data->key)+1;
         num_times = node->left->data->num_times;
         fwrite(&len, 4, 1, fp);
-        fwrite(node->left->data->key,sizeof(char),len,fp);
+        fwrite(node->left->data->key, sizeof(char),len,fp);
         fwrite(&num_times,4,1,fp);
         save_tree_recursive(node->left,fp);
     }
@@ -176,32 +179,49 @@ void save_tree(rb_tree* tree, FILE* fp){
 
 void load_tree(rb_tree* tree, FILE* fp){
     int magicNumber;
-    int nodeNumber = 0;
+    int nodeNumber;
     int i;
+    int comodin;
     int len, num_times;
-    char* word = "";
+    char word[MAXCHAR];
+    char* paraula;
     node_data *n_data;
-    fread(&magicNumber, 4, 1, fp);
-    if(magicNumber == 0x01234567){
-        fread(&nodeNumber,4,1, fp);
+    int it;
+    comodin = fread(&magicNumber, 4, 1, fp);
+    if(magicNumber == MAGIC_NUMBER){
+        comodin = fread(&nodeNumber,4,1, fp);
         for(i=0; i < nodeNumber; i++){
-            fread(&len, 4,1, fp);
-            printf("Longitud:%d\n", len);
-            //fread(word, sizeof(char),len,fp);
-            //printf("%s", word);
-            fread(&num_times,4,1,fp);
-            printf("%d \n", num_times);
+            comodin = fread(&len, 4,1, fp);
+            if (comodin != 0){
+                printf("Longitud:%d\n", len);
+            }
+            comodin = fread(word, sizeof(char),len,fp);
+            if (comodin != 0){
+                printf("%s \n", word);
+            }
+            comodin = fread(&num_times,4,1,fp);
+            if (comodin != 0){
+                printf("%d \n", num_times);
+            }
             n_data = malloc(sizeof(node_data));
 
+            paraula = malloc((len+1)*sizeof(char));
+
+            for (it = 0; it <= len; it++){
+                paraula[it] = word[it];
+            }
+            paraula[len+1] = 0;
             /* This is the key by which the node is indexed in the tree */
-            n_data->key = word;
+            n_data->key = paraula;
 
             /* This is additional information that is stored in the tree */
             n_data->num_times = num_times;
 
             /* We insert the node in the tree */
             insert_node(tree, n_data);
-            tree->num_nodes++;
+            tree->num_nodes++; 
+            free(paraula);
+            //free(n_data);
         }
     }
 }
@@ -382,6 +402,7 @@ void insert_node(rb_tree *tree, node_data *data) {
 
     /* Find where node belongs */
     current = tree->root;
+    printf("KEY: %s\n", data->key);
     parent = 0;
     while (current != NIL) {
         if (compare_key1_equal_to_key2(data->key, current->data->key)) {

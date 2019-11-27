@@ -99,7 +99,7 @@ void process_line(char *line, rb_tree* tree)
         if (is_word) {
 
             /* Put a '\0' (end-of-word) at the end of the string*/
-            paraula[j] = 0;
+            //paraula[j] = 0;
 
             n_data = find_node(tree, paraula);
 
@@ -184,10 +184,10 @@ void process_dictionary(rb_tree* tree, char* dictionary){
     
     while (fgets(line, MAXCHAR, fp)){
 
-        palabra = malloc((strlen(line)+1)*sizeof(char));
+        palabra = malloc((strlen(line))*sizeof(char));
         for(i=0;i<strlen(line);i++)
             palabra[i] = line[i];
-        palabra[strlen(line)-1] = 0;
+        //palabra[strlen(line)] = 0;
         add_word_to_tree(palabra,tree);
     }
     fclose(fp);
@@ -219,8 +219,11 @@ int menu()
     printf(" 5 - Sortir\n\n");
     printf("   Escull opcio: ");
 
-    fgets(str, 5, stdin);
-    opcio = atoi(str); 
+    if (fgets(str, 5, stdin) != NULL){
+        opcio = atoi(str); 
+    }else{
+        opcio = 5;
+    }
 
     return opcio;
 }
@@ -256,12 +259,18 @@ int main(int argc, char **argv)
         switch (opcio) {
             case 1: //DONE
                 printf("Fitxer de diccionari de paraules: ");
-                fgets(str1, MAXCHAR, stdin);
-                str1[strlen(str1)-1]=0;
+                if(fgets(str1, MAXCHAR, stdin) != NULL){
+                    str1[strlen(str1)-1]=0;
+                }else{
+                    return 0;
+                }
 
                 printf("Fitxer de base de dades: ");
-                fgets(str2, MAXCHAR, stdin);
-                str2[strlen(str2)-1]=0;
+                if(fgets(str2, MAXCHAR, stdin) != NULL){
+                    str2[strlen(str2)-1]=0;
+                }else{
+                    return 0;
+                    }
                 
                 if (tree->root != NIL){
                     delete_tree(tree);
@@ -277,7 +286,9 @@ int main(int argc, char **argv)
 
             case 2:
                 printf("Nom de fitxer en que es desara l'arbre: ");
-                fgets(str1, MAXCHAR, stdin);
+                if(fgets(str1, MAXCHAR, stdin) == NULL){
+                    return 0;
+                }
 
                 /* Falta codi */
                 if (tree->root == NIL){
@@ -291,7 +302,9 @@ int main(int argc, char **argv)
 
             case 3:
                 printf("Nom del fitxer que conté l'arbre: ");
-                fgets(str1, MAXCHAR, stdin);
+                if(fgets(str1, MAXCHAR, stdin) == NULL){
+                    return 0;
+                }
                 if (tree->root != NIL){
                     delete_tree(tree);
                     free(tree);
@@ -310,8 +323,11 @@ int main(int argc, char **argv)
 
             case 4://DONE.
                 printf("Paraula a buscar o prem enter per saber la paraula que apareix mes vegades: ");
-                fgets(str1, MAXCHAR, stdin);
-                str1[strlen(str1)-1]=0;
+                if(fgets(str1, MAXCHAR, stdin) != NULL){
+                    str1[strlen(str1)-1]=0;
+                } else{
+                    return 0;
+                }
                 if(tree->root != NIL){
                     if(str1[0] == 0){
                         node* max = find_most_occurrences(tree);
