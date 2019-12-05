@@ -2,6 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h> 
+#include <unistd.h>
+#include <sys/wait.h>
+#include <semaphore.h>
 
 #include "red-black-tree.h"
 #include "tree-to-mmap.h"
@@ -146,9 +149,9 @@ void process_file(rb_tree *tree, char *fname)
 rb_tree *create_tree(char *fname_dict, char *fname_db)
 {
   FILE *fp_dict, *fp_db;
-
   rb_tree *tree;
-  int i, num_files;
+  
+  int i,j, num_files;
   char line[MAXCHAR];
 
   fp_dict = fopen(fname_dict, "r");
@@ -177,24 +180,39 @@ rb_tree *create_tree(char *fname_dict, char *fname_db)
   /* Read the number of files the database contains */
   fgets(line, MAXCHAR, fp_db);
   num_files = atoi(line);
+  int NUM_CHILDS = num_files;
+  pid_t child_pids[NUM_CHILDS];
   fseek(fp_db,0, SEEK_SET);
   char* mmap_dbfiles = dbfnames_to_mmap(fp_db);
 
-  /* Read database files */
-  for(i = 0; i < num_files; i++) {
-    printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles,i));
+  for(j = 0; j < NUM_CHILDS; j++){
+    if((child_pids[j] = fork()) == 0 ){ //FILL
+      /* Read database files */
+      for(i = 0; i < num_files; i++) {
+        printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles,i));
 
-    /* Process file */
-    process_file(tree, get_dbfname_from_mmap(mmap_dbfiles,i));
+        /* Process file */
+        process_file(tree, get_dbfname_from_mmap(mmap_dbfiles,i));
+      }
+    
+      exit(0);
+
+    }
+      
   }
 
-  /* Close files */
-  fclose(fp_dict);
-  fclose(fp_db);
+  for(i = 0; i < NUM_CHILDS; i++){
+    wait(NULL); //Esperem a que acabin tots els fills
+  }
   
   /* Deserialization of data from tree*/
   deserialize_node_data_from_mmap(tree, mmap_node_data);
   dbfnames_munmmap(mmap_dbfiles);
   /* Return created tree */
+
+  /* Close files */
+  fclose(fp_dict);
+  fclose(fp_db); 
+  
   return tree;
 }
