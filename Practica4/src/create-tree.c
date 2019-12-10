@@ -12,6 +12,9 @@
 
 #define MAXCHAR 100
 
+sem_t mutex;
+
+
 /**
  *
  *  Given a file, insert the words it contains into a tree.  We assume that
@@ -103,8 +106,11 @@ void index_words_line(rb_tree *tree, char *line)
       /* Search for the word in the tree */
       n_data = find_node(tree, paraula);
 
-      if (n_data != NULL)
+      if (n_data != NULL){
+        sem_wait(&mutex);
         n_data->num_times++;
+        sem_post(&mutex);
+      }
     }
 
     /* Search for the beginning of a candidate word */
@@ -183,20 +189,19 @@ rb_tree *create_tree(char *fname_dict, char *fname_db)
   int NUM_CHILDS = num_files;
   pid_t child_pids[NUM_CHILDS];
   fseek(fp_db,0, SEEK_SET);
+  sem_init(&mutex,1,1); //shared between processes
   char* mmap_dbfiles = dbfnames_to_mmap(fp_db);
 
   for(j = 0; j < NUM_CHILDS; j++){
     if((child_pids[j] = fork()) == 0 ){ //FILL
       /* Read database files */
-      for(i = 0; i < num_files; i++) {
-        printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles,i));
+      //TODO right now the number of childs is the number of files
+      printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles,j));
 
-        /* Process file */
-        process_file(tree, get_dbfname_from_mmap(mmap_dbfiles,i));
-      }
-    
+      /* Process file */
+      process_file(tree, get_dbfname_from_mmap(mmap_dbfiles,j));
+
       exit(0);
-
     }
       
   }
@@ -213,6 +218,8 @@ rb_tree *create_tree(char *fname_dict, char *fname_db)
   /* Close files */
   fclose(fp_dict);
   fclose(fp_db); 
+
+  sem_destroy(&mutex);
   
   return tree;
 }
