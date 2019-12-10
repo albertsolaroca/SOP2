@@ -11,9 +11,12 @@
 #include "dbfnames-mmap.h"
 
 #define MAXCHAR 100
+#define NUM_CHILDS 1
 
-sem_t mutex;
 
+void child_method(rb_tree* tree, char* filename, int num_files, sem_t* mutex){
+    process_file(tree,filename,mutex);
+}
 
 /**
  *
@@ -59,7 +62,7 @@ void index_dictionary_words(rb_tree *tree, FILE *fp)
  *
  */
 
-void index_words_line(rb_tree *tree, char *line)
+void index_words_line(rb_tree *tree, char *line,sem_t* mutex)
 {
   node_data *n_data;
 
@@ -107,9 +110,9 @@ void index_words_line(rb_tree *tree, char *line)
       n_data = find_node(tree, paraula);
 
       if (n_data != NULL){
-        sem_wait(&mutex);
+        sem_wait(mutex);
         n_data->num_times++;
-        sem_post(&mutex);
+        sem_post(mutex);
       }
     }
 
@@ -127,7 +130,7 @@ void index_words_line(rb_tree *tree, char *line)
  *
  */
 
-void process_file(rb_tree *tree, char *fname)
+void process_file(rb_tree *tree, char *fname,sem_t* mutex)
 {
   FILE *fp;
   char line[MAXCHAR];
@@ -139,7 +142,7 @@ void process_file(rb_tree *tree, char *fname)
   }
 
   while (fgets(line, MAXCHAR, fp))
-    index_words_line(tree, line);
+    index_words_line(tree, line,mutex);
 
   fclose(fp);
 }
@@ -152,59 +155,54 @@ void process_file(rb_tree *tree, char *fname)
  */
 
 
-rb_tree *create_tree(char *fname_dict, char *fname_db)
-{
-  FILE *fp_dict, *fp_db;
-  rb_tree *tree;
-  
-  int i,j, num_files;
-  char line[MAXCHAR];
+rb_tree *create_tree(char *fname_dict, char *fname_db) {
+    FILE *fp_dict, *fp_db;
+    rb_tree *tree;
+    sem_t *mutex = (sem_t *) malloc(sizeof(sem_t));
+    int i, j, num_files;
+    char line[MAXCHAR];
 
-  fp_dict = fopen(fname_dict, "r");
-  if (!fp_dict) {
-    printf("Could not open dictionary file %s\n", fname_dict);
-    return NULL;
-  }
-
-  fp_db = fopen(fname_db, "r");
-  if (!fp_db) {
-    printf("Could not open dabase file %s\n", fname_db);
-    return NULL;
-  }
-
-  /* Allocate memory for tree */
-  tree = (rb_tree *) malloc(sizeof(rb_tree));
-
-  /* Initialize the tree */
-  init_tree(tree);
-
-  /* Index dictionary words */
-  index_dictionary_words(tree, fp_dict);
-  /* Serialization of data from tree*/
-  char* mmap_node_data = serialize_node_data_to_mmap(tree);
-
-  /* Read the number of files the database contains */
-  fgets(line, MAXCHAR, fp_db);
-  num_files = atoi(line);
-  int NUM_CHILDS = num_files;
-  pid_t child_pids[NUM_CHILDS];
-  fseek(fp_db,0, SEEK_SET);
-  sem_init(&mutex,1,1); //shared between processes
-  char* mmap_dbfiles = dbfnames_to_mmap(fp_db);
-
-  for(j = 0; j < NUM_CHILDS; j++){
-    if((child_pids[j] = fork()) == 0 ){ //FILL
-      /* Read database files */
-      //TODO right now the number of childs is the number of files
-      printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles,j));
-
-      /* Process file */
-      process_file(tree, get_dbfname_from_mmap(mmap_dbfiles,j));
-
-      exit(0);
+    fp_dict = fopen(fname_dict, "r");
+    if (!fp_dict) {
+        printf("Could not open dictionary file %s\n", fname_dict);
+        return NULL;
     }
-      
-  }
+
+    fp_db = fopen(fname_db, "r");
+    if (!fp_db) {
+        printf("Could not open dabase file %s\n", fname_db);
+        return NULL;
+    }
+
+    /* Allocate memory for tree */
+    tree = (rb_tree *) malloc(sizeof(rb_tree));
+
+    /* Initialize the tree */
+    init_tree(tree);
+
+    /* Index dictionary words */
+    index_dictionary_words(tree, fp_dict);
+    /* Serialization of data from tree*/
+    char *mmap_node_data = serialize_node_data_to_mmap(tree);
+
+    /* Read the number of files the database contains */
+    fgets(line, MAXCHAR, fp_db);
+    num_files = atoi(line);
+    pid_t child_pids[NUM_CHILDS];
+    fseek(fp_db, 0, SEEK_SET);
+    sem_init(mutex, 1, 1); //shared between processes
+    char *mmap_dbfiles = dbfnames_to_mmap(fp_db);
+
+    for (j = 0; j < NUM_CHILDS; j++) {
+        if ((child_pids[j] = fork()) == 0) { //FILLS
+            /* Read database files */
+            printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles, j));
+
+            child_method(tree, get_dbfname_from_mmap(mmap_dbfiles, j),num_files,mutex);
+
+            exit(0);
+        }
+    }
 
   for(i = 0; i < NUM_CHILDS; i++){
     wait(NULL); //Esperem a que acabin tots els fills
@@ -219,7 +217,7 @@ rb_tree *create_tree(char *fname_dict, char *fname_db)
   fclose(fp_dict);
   fclose(fp_db); 
 
-  sem_destroy(&mutex);
+  sem_destroy(mutex);
   
   return tree;
 }
