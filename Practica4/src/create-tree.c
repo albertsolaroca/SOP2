@@ -11,12 +11,8 @@
 #include "dbfnames-mmap.h"
 
 #define MAXCHAR 100
-#define NUM_CHILDS 1
+#define NUM_CHILDS 2
 
-
-void child_method(rb_tree* tree, char* filename, int num_files, sem_t* mutex){
-    process_file(tree,filename,mutex);
-}
 
 /**
  *
@@ -147,6 +143,10 @@ void process_file(rb_tree *tree, char *fname,sem_t* mutex)
   fclose(fp);
 }
 
+void child_method(rb_tree* tree, char* filename, int num_files, sem_t* mutex){
+    process_file(tree,filename,mutex);
+}
+
 /**
  *
  *  Construct the tree given a dictionary file and a 
@@ -154,12 +154,11 @@ void process_file(rb_tree *tree, char *fname,sem_t* mutex)
  *
  */
 
-
 rb_tree *create_tree(char *fname_dict, char *fname_db) {
     FILE *fp_dict, *fp_db;
     rb_tree *tree;
     sem_t *mutex = (sem_t *) malloc(sizeof(sem_t));
-    int i, j, num_files;
+    int i, j;// num_files;
     char line[MAXCHAR];
 
     fp_dict = fopen(fname_dict, "r");
@@ -187,7 +186,7 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
 
     /* Read the number of files the database contains */
     fgets(line, MAXCHAR, fp_db);
-    num_files = atoi(line);
+    //num_files = atoi(line);
     pid_t child_pids[NUM_CHILDS];
     fseek(fp_db, 0, SEEK_SET);
     sem_init(mutex, 1, 1); //shared between processes
@@ -198,7 +197,7 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
             /* Read database files */
             printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles, j));
 
-            child_method(tree, get_dbfname_from_mmap(mmap_dbfiles, j),num_files,mutex);
+            process_file(tree,get_dbfname_from_mmap(mmap_dbfiles,j),mutex);
 
             exit(0);
         }
