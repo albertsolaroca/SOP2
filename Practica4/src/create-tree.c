@@ -5,7 +5,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 #include <semaphore.h>
+#include <pthread.h>
+
 
 #include "red-black-tree.h"
 #include "tree-to-mmap.h"
@@ -164,6 +167,8 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
     int i, j, num_files;
     char line[MAXCHAR];
     char* filename;
+    struct timeval tv1, tv2; // Cronologic
+    clock_t t1, t2;
 
     fp_dict = fopen(fname_dict, "r");
     if (!fp_dict) {
@@ -176,6 +181,7 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
         printf("Could not open database file %s\n", fname_db);
         return NULL;
     }
+
 
     /* Allocate memory for tree */
     tree = (rb_tree *) malloc(sizeof(rb_tree));
@@ -199,6 +205,9 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
 
     /*Map files to memory*/
     char *mmap_dbfiles = dbfnames_to_mmap(fp_db);
+
+    gettimeofday(&tv1, NULL);
+    t1 = clock();
 
     for (j = 0; j < NUM_CHILDS; j++) {
         if ((child_pids[j] = fork()) == 0) { //Create child processes
@@ -241,6 +250,15 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
 
   sem_destroy(semafor_paraula);
   sem_destroy(semafor_files);
+
+    gettimeofday(&tv2, NULL);
+    t2 = clock();
+
+    printf("Temps de CPU: %f seconds\n",
+       (double)(t2 - t1) / (double) CLOCKS_PER_SEC);
+    printf("Temps cronologic: %f seconds\n",
+       (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
+       (double) (tv2.tv_sec - tv1.tv_sec));
   
   return tree;
 }
