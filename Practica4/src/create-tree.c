@@ -164,7 +164,8 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
     sem_t* semafor_files = mmap(NULL, sizeof(sem_t *), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     size_t* file_number = mmap(NULL, sizeof(size_t *), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     pid_t child_pids[NUM_CHILDS];
-    int i, j, num_files;
+
+    int i, num_files;
     char line[MAXCHAR];
     char* filename;
     struct timeval tv1, tv2; // Cronologic
@@ -209,8 +210,8 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
     gettimeofday(&tv1, NULL);
     t1 = clock();
 
-    for (j = 0; j < NUM_CHILDS; j++) {
-        if ((child_pids[j] = fork()) == 0) { //Create child processes
+    for (i = 0; i < NUM_CHILDS; i++) {
+        if ((child_pids[i] = fork()) == 0) { //Create child processes
             while(1){
                 sem_wait(semafor_files);
 
@@ -238,11 +239,12 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
   }
 
   munmap(file_number, sizeof(size_t *));
+  munmap(semafor_files, sizeof(sem_t *));
+  munmap(semafor_paraula, sizeof(sem_t *));
 
-    /* Deserialization of data from tree*/
+  /* Deserialization of data from tree*/
   deserialize_node_data_from_mmap(tree, mmap_node_data);
   dbfnames_munmmap(mmap_dbfiles);
-  /* Return created tree */
 
   /* Close files */
   fclose(fp_dict);
@@ -251,14 +253,16 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
   sem_destroy(semafor_paraula);
   sem_destroy(semafor_files);
 
-    gettimeofday(&tv2, NULL);
-    t2 = clock();
+  gettimeofday(&tv2, NULL);
+  t2 = clock();
 
-    printf("Temps de CPU: %f seconds\n",
-       (double)(t2 - t1) / (double) CLOCKS_PER_SEC);
-    printf("Temps cronologic: %f seconds\n",
-       (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
-       (double) (tv2.tv_sec - tv1.tv_sec));
-  
-  return tree;
+  printf("Temps de CPU: %f seconds\n",
+   (double)(t2 - t1) / (double) CLOCKS_PER_SEC);
+
+  printf("Temps cronologic: %f seconds\n",
+   (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
+   (double) (tv2.tv_sec - tv1.tv_sec));
+
+    /* Return created tree */
+    return tree;
 }
