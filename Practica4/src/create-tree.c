@@ -4,6 +4,7 @@
 #include <ctype.h> 
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
 #include <semaphore.h>
 
 #include "red-black-tree.h"
@@ -12,7 +13,6 @@
 
 #define MAXCHAR 100
 #define NUM_CHILDS 2
-
 
 /**
  *
@@ -58,7 +58,7 @@ void index_dictionary_words(rb_tree *tree, FILE *fp)
  *
  */
 
-void index_words_line(rb_tree *tree, char *line,sem_t* mutex)
+void index_words_line(rb_tree *tree, char *line,sem_t* semafor_paraula)
 {
   node_data *n_data;
 
@@ -106,9 +106,9 @@ void index_words_line(rb_tree *tree, char *line,sem_t* mutex)
       n_data = find_node(tree, paraula);
 
       if (n_data != NULL){
-        sem_wait(mutex);
+        sem_wait(semafor_paraula);
         n_data->num_times++;
-        sem_post(mutex);
+        sem_post(semafor_paraula);
       }
     }
 
@@ -126,7 +126,7 @@ void index_words_line(rb_tree *tree, char *line,sem_t* mutex)
  *
  */
 
-void process_file(rb_tree *tree, char *fname,sem_t* mutex)
+void process_file(rb_tree *tree, char *fname,sem_t* semafor_paraula)
 {
   FILE *fp;
   char line[MAXCHAR];
@@ -138,13 +138,13 @@ void process_file(rb_tree *tree, char *fname,sem_t* mutex)
   }
 
   while (fgets(line, MAXCHAR, fp))
-    index_words_line(tree, line,mutex);
+    index_words_line(tree, line,semafor_paraula);
 
   fclose(fp);
 }
 
-void child_method(rb_tree* tree, char* filename, int num_files, sem_t* mutex){
-    process_file(tree,filename,mutex);
+void child_method(rb_tree* tree, char* filename, int num_files, sem_t* semafor_paraula){
+    process_file(tree,filename,semafor_paraula);
 }
 
 /**
@@ -157,9 +157,13 @@ void child_method(rb_tree* tree, char* filename, int num_files, sem_t* mutex){
 rb_tree *create_tree(char *fname_dict, char *fname_db) {
     FILE *fp_dict, *fp_db;
     rb_tree *tree;
-    sem_t *mutex = (sem_t *) malloc(sizeof(sem_t));
-    int i, j;// num_files;
+    sem_t* semafor_paraula = mmap(NULL, sizeof(sem_t *), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    sem_t* semafor_files = mmap(NULL, sizeof(sem_t *), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    size_t* file_number = mmap(NULL, sizeof(size_t *), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    pid_t child_pids[NUM_CHILDS];
+    int i, j, num_files;
     char line[MAXCHAR];
+    char* filename;
 
     fp_dict = fopen(fname_dict, "r");
     if (!fp_dict) {
@@ -169,7 +173,7 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
 
     fp_db = fopen(fname_db, "r");
     if (!fp_db) {
-        printf("Could not open dabase file %s\n", fname_db);
+        printf("Could not open database file %s\n", fname_db);
         return NULL;
     }
 
@@ -186,18 +190,35 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
 
     /* Read the number of files the database contains */
     fgets(line, MAXCHAR, fp_db);
-    //num_files = atoi(line);
-    pid_t child_pids[NUM_CHILDS];
+    num_files = atoi(line);
     fseek(fp_db, 0, SEEK_SET);
-    sem_init(mutex, 1, 1); //shared between processes
+
+    /*Init semaphores*/
+    sem_init(semafor_paraula, 1, 1); // middle 1 shows shared between processes
+    sem_init(semafor_files,1,1);
+
+    /*Map files to memory*/
     char *mmap_dbfiles = dbfnames_to_mmap(fp_db);
 
     for (j = 0; j < NUM_CHILDS; j++) {
-        if ((child_pids[j] = fork()) == 0) { //FILLS
-            /* Read database files */
-            printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles, j));
+        if ((child_pids[j] = fork()) == 0) { //Create child processes
+            while(1){
+                sem_wait(semafor_files);
 
-            process_file(tree,get_dbfname_from_mmap(mmap_dbfiles,j),mutex);
+                if(*file_number >= num_files){
+                    sem_post(semafor_files);
+                    break;
+                }else {
+                    printf("Processing %s\n", get_dbfname_from_mmap(mmap_dbfiles, *file_number));
+                    filename = get_dbfname_from_mmap(mmap_dbfiles, *file_number);
+                    /* Read database files */
+                    (*file_number)++;
+                    sem_post(semafor_files);
+
+                    process_file(tree, filename, semafor_paraula);
+                }
+
+            }
 
             exit(0);
         }
@@ -206,8 +227,10 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
   for(i = 0; i < NUM_CHILDS; i++){
     wait(NULL); //Esperem a que acabin tots els fills
   }
-  
-  /* Deserialization of data from tree*/
+
+  munmap(file_number, sizeof(size_t *));
+
+    /* Deserialization of data from tree*/
   deserialize_node_data_from_mmap(tree, mmap_node_data);
   dbfnames_munmmap(mmap_dbfiles);
   /* Return created tree */
@@ -216,7 +239,8 @@ rb_tree *create_tree(char *fname_dict, char *fname_db) {
   fclose(fp_dict);
   fclose(fp_db); 
 
-  sem_destroy(mutex);
+  sem_destroy(semafor_paraula);
+  sem_destroy(semafor_files);
   
   return tree;
 }
