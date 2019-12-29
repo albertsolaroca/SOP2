@@ -1,16 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <ctype.h> 
+#include <ctype.h>
 #include <pthread.h>
 
 #include "red-black-tree.h"
 
 #define MAXCHAR 100
-#define NUM_FILS 2
-
-pthread_t  ntid[NUM_FILS];
-rb_tree *tree;
+pthread_t ntid;
+FILE* fp_dict;
 
 /**
  *
@@ -138,35 +136,41 @@ void process_file(rb_tree *tree, char *fname)
   fclose(fp);
 }
 
-/**
-*  Given a pointer to a database, process it
-*/
-
 void* process_database(void* arg){
-  int i,num_files;
-  char line[MAXCHAR];
-  FILE* fp_db = (FILE*) arg;
+    rb_tree* local_tree;
+    int num_files,i;
+    char line[MAXCHAR];
 
-  /* Read the number of files the database contains */
-  fgets(line, MAXCHAR, fp_db);
-  num_files = atoi(line);
-  if (num_files <= 0) {
-    printf("Number of files is %d\n", num_files);
-    exit(1);
-  }
+    /* Allocate memory for tree */
+    local_tree = (rb_tree *) malloc(sizeof(rb_tree));
 
-  /* Read database files */
-  for(i = 0; i < num_files; i++) {
+    /* Initialize the tree */
+    init_tree(local_tree);
+
+    /* Index dictionary words */
+    index_dictionary_words(local_tree, fp_dict);
+
+    FILE* fp_db = (FILE*) arg;
+    /* Read the number of files the database contains */
     fgets(line, MAXCHAR, fp_db);
+    num_files = atoi(line);
+    if (num_files <= 0) {
+        printf("Number of files is %d\n", num_files);
+        exit(1);
+    }
 
-    /* Remove '\n' from line */
-    line[strlen(line)-1] = 0;
-    printf("Processing %s\n", line);
+    /* Read database files */
+    for(i = 0; i < num_files; i++) {
+        fgets(line, MAXCHAR, fp_db);
 
-    /* Process file */
-    process_file(tree, line);
-  }
-  return ((void*)0);
+        /* Remove '\n' from line */
+        line[strlen(line)-1] = 0;
+        printf("Processing %s\n", line);
+
+        /* Process file */
+        process_file(local_tree, line);
+    }
+    return (void*)local_tree;
 }
 
 /**
@@ -179,11 +183,10 @@ void* process_database(void* arg){
 
 rb_tree *create_tree(char *fname_dict, char *fname_db)
 {
-  FILE *fp_dict;
   FILE *fp_db;
 
-  int i,err;
-  void* tret;
+  rb_tree *tree;
+  int err;
 
   fp_dict = fopen(fname_dict, "r");
   if (!fp_dict) {
@@ -206,21 +209,13 @@ rb_tree *create_tree(char *fname_dict, char *fname_db)
   /* Index dictionary words */
   index_dictionary_words(tree, fp_dict);
 
-  for(i=0;i < NUM_FILS;i++){
-    err = pthread_create(ntid + i,NULL,process_database,(void*)fp_db);
-    if(err != 0){
-      printf("No s'ha pogut crear el fil 1\n");
+  err = pthread_create(&ntid, NULL, process_database,(void*)fp_db);
+  if (err != 0) {
+      printf("No puc crear el fil.\n");
       exit(1);
-    }
   }
 
-  for(i = 0; i < NUM_FILS; i++){
-    err = pthread_join(ntid[i],&tret);
-    if(err != 0){
-      printf("error pthread_join al fil 1\n");
-      exit(1);
-    }
-  }
+  pthread_join(ntid,(void**)&tree);
 
   /* Close files */
   fclose(fp_dict);
