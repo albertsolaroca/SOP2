@@ -7,7 +7,7 @@
 #include "red-black-tree.h"
 
 #define MAXCHAR 100
-#define num_threads 2
+#define NUM_THREADS 4
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_file = PTHREAD_MUTEX_INITIALIZER;
 struct args_tree{
@@ -26,7 +26,8 @@ struct args_tree{
 
 void index_dictionary_words(rb_tree *tree, FILE *fp)
 {
-  char *s, word[MAXCHAR];
+  char *s;
+  char word[MAXCHAR];
 
   node_data *n_data;
 
@@ -164,44 +165,44 @@ void update_tree(rb_tree* local_tree, rb_tree* shared_tree){
 void* process_database(void* arg){
     struct args_tree* args = (struct args_tree*) arg;
     char* file_to_read;
-    char line2[MAXCHAR];
+    char line[MAXCHAR];
     int lenLine;
 
     pthread_mutex_lock(&mutex_file);
-    file_to_read = fgets(line2, MAXCHAR, args->fp_db);
+    file_to_read = fgets(line, MAXCHAR, args->fp_db);
     pthread_mutex_unlock(&mutex_file);
     if(file_to_read){
-        rb_tree* local_tree = (rb_tree *) malloc(sizeof(rb_tree));
+      rb_tree* local_tree = (rb_tree *) malloc(sizeof(rb_tree));
 
-        /* Initialize the tree */
-        init_tree(local_tree);
+      /* Initialize the tree */
+      init_tree(local_tree);
 
-        /* Index dictionary words */
-        index_dictionary_words(local_tree, args->fp_dict);
+      /* Index dictionary words */
+      index_dictionary_words(local_tree, args->fp_dict);
 
-        while(file_to_read) {
-            lenLine = strlen(file_to_read);
-            file_to_read[lenLine-1] = '\0';
-            //Processing the file to add word appearances to the copied tree
-            FILE *fp;
-            char line[MAXCHAR];
-            fp = fopen(file_to_read, "r");
-            if (!fp) {
-                printf("Could not open %s\n", file_to_read);
-                exit(1);
-            }
-            while (fgets(line, MAXCHAR, fp)) {
-                index_words_line(local_tree, line);
-            }
-            fclose(fp);
-            pthread_mutex_lock(&mutex_file);
-            file_to_read = fgets(line2, MAXCHAR, args->fp_db);
-            pthread_mutex_unlock(&mutex_file);
+      while(file_to_read) {
+        lenLine = strlen(file_to_read);
+        file_to_read[lenLine-1] = '\0';
+        //Processing the file to add word appearances to the copied tree
+        FILE *fp;
+        char line[MAXCHAR];
+        fp = fopen(file_to_read, "r");
+        if (!fp) {
+          printf("Could not open %s\n", file_to_read);
+          exit(1);
         }
+        while (fgets(line, MAXCHAR, fp)) {
+          index_words_line(local_tree, line);
+        }
+        fclose(fp);
+        pthread_mutex_lock(&mutex_file);
+        file_to_read = fgets(line, MAXCHAR, args->fp_db);
+        pthread_mutex_unlock(&mutex_file);
+      }
 
-        update_tree(local_tree,args->original_tree);
-        delete_tree(local_tree);
-        free(local_tree);
+      update_tree(local_tree,args->original_tree);
+      delete_tree(local_tree);
+      free(local_tree);
     }
     free(args);
 
@@ -225,45 +226,49 @@ rb_tree *create_tree(char *fname_dict, char *fname_db)
   rb_tree *tree;
   int err;
 
-    fp_dict = fopen(fname_dict, "r");
-    if (!fp_dict) {
-        printf("Could not open dictionary file %s\n", fname_dict);
-        return NULL;
-    }
 
-    fp_db = fopen(fname_db, "r");
-    if (!fp_db) {
-        printf("Could not open database file %s\n", fname_db);
-        return NULL;
-    }
+  fp_dict = fopen(fname_dict, "r"); 
+  fp_db = fopen(fname_db, "r");
 
-
-    /* Allocate memory for tree */
-    tree = (rb_tree *) malloc(sizeof(rb_tree));
-
-    /* Initialize the tree */
-    init_tree(tree);
-
-    /* Index dictionary words */
-    index_dictionary_words(tree, fp_dict);
-  fgets(line, MAXCHAR, fp_db);
-  num_files = atoi(line);
-    if (num_files <= 0) {
-      printf("Number of files is %d\n", num_files);
-      exit(1);
+  if (!fp_dict) {
+    printf("Could not open dictionary file %s\n", fname_dict);
+    return NULL;
   }
 
-  pthread_t ntid[num_threads];
-    for(i = 0; i < num_threads; i++){
-      struct args_tree* args = (struct args_tree*) malloc(sizeof(struct args_tree));
-      args->fp_db = fp_db;
-      args->fp_dict = fp_dict;
-      args->original_tree = tree;
-      err = pthread_create(&ntid[i], NULL, process_database,(void*)args);
-      if (err) {
-          printf("No puc crear el fil.\n");
-          exit(1);
-      }
+
+  if (!fp_db) {
+    printf("Could not open database file %s\n", fname_db);
+    return NULL;
+  }
+
+
+  /* Allocate memory for tree */
+  tree = (rb_tree *) malloc(sizeof(rb_tree));
+
+  /* Initialize the tree */
+  init_tree(tree);
+
+  /* Index dictionary words */
+  index_dictionary_words(tree, fp_dict);
+  fgets(line, MAXCHAR, fp_db);
+  num_files = atoi(line);
+
+  if (num_files <= 0) {
+    printf("Number of files is %d\n", num_files);
+    exit(1);
+  }
+
+  pthread_t ntid[NUM_THREADS];
+  for(i = 0; i < NUM_THREADS; i++){
+    struct args_tree* args = (struct args_tree*) malloc(sizeof(struct args_tree));
+    args->fp_db = fp_db;
+    args->fp_dict = fp_dict;
+    args->original_tree = tree;
+    err = pthread_create(&(ntid[i]), NULL, process_database, (void *) args);
+    if (err) {
+      printf("No puc crear el fil.\n");
+      exit(1);
+    }
   }
 
   for(i=0; i < num_files; i++ ){
