@@ -12,6 +12,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 struct args_tree{
     char* filename;
     FILE* fp_dict;
+    FILE* [30] fp_database;
     rb_tree* original_tree;
 };
 
@@ -234,8 +235,10 @@ rb_tree *create_tree(char *fname_dict, char *fname_db)
       printf("Number of files is %d\n", num_files);
       exit(1);
   }
-
+  files_thread = num_files/nume_threads;
+  //NUMERO DE FILS NO TROBO VARIABLE
   pthread_t ntid[num_files];
+  //ALBERT AQUÍ ESTÀ MAL TABULAT AIXÒ EM SEMBLA PERÒ DES DEL MÒBIL NO M'ATREVEIXO A DESTABULAR
     for(i = 0; i < num_files; i++){
       fgets(line, MAXCHAR, fp_db);
       /* Remove '\n' from line */
